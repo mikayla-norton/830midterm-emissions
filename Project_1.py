@@ -8,6 +8,20 @@ import copy
 import pylab as pl
 import numpy as np
 import seaborn as sns
+import plotly 
+from plotly.graph_objs import *
+
+
+#### SETTING MATPLOTLIB PARAMS ######
+plt.rcParams.update({'text.color': "white",
+                    'axes.labelcolor': "white",
+                    'axes.edgecolor': 'white',
+                    'xtick.color': 'white',
+                    'ytick.color': 'white',
+                    'figure.facecolor': '0F1116',
+                    'axes.facecolor': '0F1116'})
+
+
 
 st.set_page_config(layout="wide")
 st.title("CMSE 830 Midterm - Geographic Annual Emissions")
@@ -41,12 +55,7 @@ df2.set_index("Country")
 
 
 
-col1, col2= st.columns([1,3])
-# col1.title('Country Emissions')
-
-# col2.title('Annual Total Emissions')
-
-# col3.title('Emissions by Type')
+col1, col2= st.columns([1,4])
 
 col1.subheader("Project Background")
 
@@ -59,29 +68,16 @@ col1.write("With any new dataset, non-visual exploration of missingness and surf
 
 col1.write("In dealing with geographic data with shape file exclusions, the requirements for generating meaningful geographic data required some creativity. To create the primary Plotly Express feature, the data set was merged with a shapefile dataset, as well as categorization data for iso-3 abbreviations and respective regions.")
 
-
-col1.subheader("Selection Criteria")
-types = col1.selectbox("Choose emission type", list(df.columns[2:10])) #emissions type
-
-start = col1.number_input("Please enter a start date", min(df["Year"]), max(df["Year"])) #start date
-end = col1.number_input("Please enter an end date", min(df["Year"]), max(df["Year"]), value=max(df["Year"])) #end date
-
-if start > end:
-    col2.error("Start date cannot be later than end date") 
+col1.subheader("Directions")
+col1.write("In the first figure to the right, customize the features by selecting the year for which per capita emissions information should be visualized. The plot will refresh accordingly, with bubbles corresponding to emissions level and hover-over information detailing numerics.")
+col1.write("In the next section, two summary figures outline the top 10 emitters globally across all dates, and the pollutant source contributing most to emissions, internationally.")
+col1.write("Lastly, investigative analytics in section 3 provides two feature figures to compare nations and/or emissions types. In the first figure of this section, the user may select a emission category, a date range, and multiple countries to visualize the trends year over year. In the second figure, one country may be selected to generate a stacked barplot of pollutant distribution annually. By hovering over the figure, detailed numerics per year and category can be viewed.")
 
 
-countries = col1.multiselect(
-    "Choose countries", list(df.index.unique()), ["China", "USA"] #countries selection
-)
+col1.subheader("Objective & Findings")
 
-if not countries:
-    col1.error("Please select at least one country.")
-else:
-    data = df_country_data[df_country_data["Country"].isin(list(countries))]
-
-
-dates = list(range(start, end+1))
-
+col1.write("As greenhouse gas emissions continue to play a significantly detrimental role in global climate issues, it is important to investigate key contributors, both in emission sources and national participants. The overview of nations with the highest level of pollution and changes in these emitter rankings acted as top objectives of this web app.")
+col1.write("It can be observed that gas plays an unmatched role in greenhouse gas emissions globally. The United States, China, and Russia also act as the highest emitters of these pollutants over the full date range. There has been a noticeable rise in emissions since the mid 1900s, a trend spanning across most nations, however, each nation has a respective difference in the key contributing pollutant to the overall emissions.")
 
 ########## PLOTTING ###############
 world_map = gpd.read_file("world-administrative-boundaries/world-administrative-boundaries.shp")
@@ -101,19 +97,15 @@ map_and_stats=world_map.merge(dfyear, on="iso3")
 map_and_stats = map_and_stats.rename(columns={'region_y': 'Major Region'})
 map_and_stats = map_and_stats.rename(columns={'name_x': 'Country'})
 
-# fig, ax = plt.subplots(1, figsize=(12, 16))
-# plt.rcParams['axes.facecolor'] = 'white'
-# plt.xticks(rotation=90)
-# plt.axis('off')
-
-# map_and_stats.plot(column="Per Capita", cmap="Reds", linewidth=0.4, ax=ax, edgecolor=".4", vmin=0, vmax=50, legend=True, legend_kwds={'shrink': 0.3})
-
-# col2.pyplot(fig)
-
 ########### WORLD MAP ############
 fig = px.scatter_geo(map_and_stats, locations="iso3",
                     size="Per Capita",hover_name="Country",color="Major Region", width=900)
+fig.update_geos(showcoastlines=True, coastlinecolor="white", coastlinewidth=1)
+
+fig.update_layout(geo=dict(bgcolor='rgba(15, 17, 22,1)'))
+
 col2.plotly_chart(fig)
+col2.divider()
 
 ########### TOP CONTRIBUTORS PLOTTING ###########
 col2.header("Significant Global Emissions Contributions")
@@ -125,6 +117,7 @@ vals = list(df.groupby('Country').sum().sort_values(by='Total',ascending=False)[
 fig, ax = plt.subplots(1,figsize=(12, 7))
 # sns.set_style('darkgrid')
 sns.barplot(x=places[:10],y=vals[:10],palette='crest',edgecolor='.2', ax=ax)
+plt.xlabel("Country")
 col2a.subheader("Top 10 Contributors to Global Emissions")
 
 col2a.pyplot(fig)
@@ -142,21 +135,46 @@ dz = pd.DataFrame({"Type": cols,
 
 fig, ax = plt.subplots(1,figsize=(12, 7))
 sns.barplot(x='Type',y='Values', data=dz,order=dz.sort_values('Values',ascending = False).Type, palette='cubehelix',edgecolor='.3', ax=ax)
-col2b.subheader('Strongest Contributing Emissions Type Globally')
+col2b.subheader('Strongest Contributing Emissions Globally')
 col2b.pyplot(fig)
+col2.divider()
 
 
+col2.header("Customizable Investigative Emissions Analytics")
+############# A - SELECTION CRITERIA ##########
+col2a, col2b = col2.columns([1,3])
+col2a.subheader("Selection Criteria")
+types = col2a.selectbox("Choose emission type", list(df.columns[2:10])) #emissions type
+
+start = col2a.number_input("Please enter a start date", min(df["Year"]), max(df["Year"])) #start date
+end = col2a.number_input("Please enter an end date", min(df["Year"]), max(df["Year"]), value=max(df["Year"])) #end date
+
+if start > end:
+    col2a.error("Start date cannot be later than end date") 
 
 
-######## FILTERED PLOTTING ###########
+countries = col2a.multiselect(
+    "Choose countries", list(df.index.unique()), ["China", "USA"] #countries selection
+)
 
-col2.header("Filtered time series plot of select countries between " + str(round(start)) + " and " + str(round(end)) + " for " + types +" data.")
+if not countries:
+    col2a.error("Please select at least one country.")
+else:
+    data = df_country_data[df_country_data["Country"].isin(list(countries))]
+
+
+dates = list(range(start, end+1))
+
+######## TIME SERIES PLOTTING ###########
+
+
+col2b.subheader("Filtered time series plot of select countries between " + str(round(start)) + " and " + str(round(end)) + " for " + types +" data.")
 cm = pl.get_cmap('Greens')
 
 
 def update_colors(ax):
     lines = ax.lines
-    colors = cm(np.linspace(0.3, 1, len(lines)))
+    colors = cm(np.linspace(0, 0.7, len(lines)))
     for line, c in zip(lines, colors):
         line.set_color(c)
 
@@ -172,7 +190,47 @@ for c in countries:
     update_colors(ax)
     plt.legend()
 
-col2.pyplot(fig)
+col2b.pyplot(fig)
 
-col2.write("Still to come after HW 6 update - addition of more geographic mapping, interactive features, clean up")
+col2.divider()
+
+
+############# B - SELECTION CRITERIA ##########
+col2a, col2b = col2.columns([1,3])
+
+col2a.subheader("Selection Criteria")
+# types = col2a.selectbox("Choose emission type", list(df.columns[2:10])) #emissions type
+
+# start = col2a.number_input("Please enter a start date", min(df["Year"]), max(df["Year"])) #start date
+# end = col2a.number_input("Please enter an end date", min(df["Year"]), max(df["Year"]), value=max(df["Year"])) #end date
+
+# if start > end:
+#     col2a.error("Start date cannot be later than end date") 
+
+
+country = col2a.selectbox(
+    "Choose country", list(df.index.unique()),index=220) #country selection
+
+if not country:
+    col2a.error("Please select at least one country.")
+else:
+    data = df_country_data[df_country_data["Country"] == country]
+    data.drop(columns=['Total', 'Per Capita'], inplace=True)
+    #data.set_index('Year', inplace=True)
+
+
+######## BAR PLOTTING ###########
+col2b.subheader("Stacked Bar of Emissions Types for " + country)
+
+# colors = cm(np.linspace(0.3, 1, len(list(df.columns[2:10]))))
+# data.plot(kind='bar', stacked=True, color=colors, ax=ax)
+# start, end = ax.get_xlim()
+# ax.xaxis.set_ticks(np.arange(start, end, 25), labels=np.arange(1750, 2021, 25))
+# col2b.pyplot(fig)
+cubhelix = px.colors.qualitative.Prism
+
+colors = {"Coal": cubhelix[0], "Oil": cubhelix[1], "Gas": cubhelix[2], "Cement": cubhelix[3], "Flaring": cubhelix[4], "Other": cubhelix[5]}
+fig = px.bar(data, x="Year", y=["Coal", "Oil", "Gas", "Cement", "Flaring", "Other"], color_discrete_map=colors, width=900)
+fig.update_layout(yaxis_title="Emissions")
+col2b.plotly_chart(fig)
 
