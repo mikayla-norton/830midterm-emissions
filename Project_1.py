@@ -188,6 +188,7 @@ for c in countries:
     plt.xlabel("Year")
     plt.ylabel(types + " Emissions Data")
     update_colors(ax)
+    ax.xaxis.set_ticks(np.arange(start, end, 25), labels=np.arange(start, end, 25))
     plt.legend()
 
 col2b.pyplot(fig)
